@@ -1,7 +1,7 @@
 # scraper/playwright_client.py
 import os
 from playwright.async_api import async_playwright
-from playwright_stealth import stealth
+from playwright_stealth.stealth import stealth
 
 async def create_stealth_context(proxy_server: str | None = None, headless: bool = True):
     """
