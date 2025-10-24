@@ -1,6 +1,7 @@
 playwright>=1.48
 playwright-stealth
-crawlee==<latest-for-python>    # optional; or use your own asyncio orchestration
+crawlee    # optional; or use your own asyncio orchestration
 aiohttp
 aiosqlite
 python-dotenv
+
