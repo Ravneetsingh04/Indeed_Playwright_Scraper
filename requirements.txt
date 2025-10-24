@@ -1,5 +1,5 @@
 playwright>=1.48
-playwright-stealth
+playwright-stealth==1.0.6
 crawlee    # optional; or use your own asyncio orchestration
 aiohttp
 aiosqlite
