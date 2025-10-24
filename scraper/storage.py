@@ -1,6 +1,7 @@
 import aiosqlite
 
-DB = "jobs.db"
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+DB= os.path.join(BASE_DIR, "jobs.db")
 
 CREATE = """
 CREATE TABLE IF NOT EXISTS jobs (
