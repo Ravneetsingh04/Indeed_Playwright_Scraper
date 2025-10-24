@@ -1,0 +1,30 @@
+name: daily-scrape
+on:
+  schedule:
+    - cron: '0 2 * * *'  # UTC cron: runs daily at 02:00 UTC (adjust to your timezone)
+  workflow_dispatch: {}
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+      - name: Install dependencies
+        run: |
+          python -m pip install -r requirements.txt
+          playwright install --with-deps
+      - name: Run scraper
+        env:
+          PROXY_SERVER: ${{ secrets.PROXY_SERVER }}
+          SCRAPERAPI_KEY: ${{ secrets.SCRAPERAPI_KEY }}
+        run: |
+          python -m scraper.run_daily  # your script that runs crawler and writes jobs.db
+      - name: Upload artifact (jobs.db)
+        uses: actions/upload-artifact@v4
+        with:
+          name: jobs-db
+          path: scraper/jobs.db
