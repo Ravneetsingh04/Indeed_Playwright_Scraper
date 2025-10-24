@@ -2,9 +2,12 @@
 import asyncio
 from scraper.playwright_client import create_stealth_context
 from scraper.storage import init_db, upsert_job
+import os
 
 async def run():
     await init_db()  # make sure DB exists
+    db= os.path.join(os.path.dirname(__file__), "jobs.db")
+    print(f"Database will be created at: {db}")
     playwright, browser, context, page = await create_stealth_context(headless=True)
     try:
         await page.goto("https://www.indeed.com/jobs?q=software+engineer&l=", wait_until="domcontentloaded")
