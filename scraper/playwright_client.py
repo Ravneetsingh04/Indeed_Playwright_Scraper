@@ -1,7 +1,7 @@
 # scraper/playwright_client.py
 import os
 from playwright.async_api import async_playwright
-from playwright_stealth.stealth import stealth
+from playwright_stealth import add_stealth_async
 
 async def create_stealth_context(proxy_server: str | None = None, headless: bool = True):
     """
@@ -18,7 +18,7 @@ async def create_stealth_context(proxy_server: str | None = None, headless: bool
     )
     page = await context.new_page()
     # Apply stealth patches BEFORE navigation
-    await stealth(page)
+    await add_stealth_async(page)
     return playwright, browser, context, page
 
 
@@ -27,5 +27,5 @@ async def create_context(proxy_server=None, headless=True):
     browser = await playwright.chromium.launch(headless=headless)
     context = await browser.new_context(proxy={"server": proxy_server} if proxy_server else None, user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) ...")
     page = await context.new_page()
-    await stealth(page)
+    await add_stealth_async(page)
     return playwright, browser, context, page
