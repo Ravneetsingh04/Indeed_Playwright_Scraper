@@ -14,7 +14,11 @@ async def create_stealth_context(proxy_server: str | None = None, headless: bool
     context = await browser.new_context(
         proxy={"server": proxy_server} if proxy_server else None,
         user_agent=(os.getenv("USER_AGENT") or
-                    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125 Safari/537.36")
+                    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125 Safari/537.36"),
+        locale="en-US",
+        viewport={"width": 1366, "height": 768},
+        java_script_enabled=True,
+        ignore_https_errors=True
     )
     page = await context.new_page()
     # Apply stealth patches BEFORE navigation
@@ -22,10 +26,7 @@ async def create_stealth_context(proxy_server: str | None = None, headless: bool
     return playwright, browser, context, page
 
 
-async def create_context(proxy_server=None, headless=True):
-    playwright = await async_playwright().start()
-    browser = await playwright.chromium.launch(headless=headless)
-    context = await browser.new_context(proxy={"server": proxy_server} if proxy_server else None, user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) ...")
     page = await context.new_page()
     await stealth_async(page)
+    await page.set_extra_http_headers({"Accept-Language": "en-US,en;q=0.9"})
     return playwright, browser, context, page
