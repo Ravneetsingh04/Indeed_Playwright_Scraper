@@ -4,6 +4,7 @@ from datetime import datetime
 from urllib.parse import urlencode, urljoin
 from scraper.playwright_client import create_stealth_context
 from scraper.storage import init_db, upsert_job
+import os
 
 BASE_URL = "https://www.indeed.com/jobs?"
 
