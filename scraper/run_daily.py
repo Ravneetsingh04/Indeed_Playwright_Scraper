@@ -19,14 +19,6 @@ async def run():
         url = BASE_URL + urlencode(params)
         print(f"➡️ Visiting: {url}")
 
-        # Make Playwright appear like a real Chrome browser
-        await context.add_init_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
-        await context.set_extra_http_headers({"Accept-Language": "en-US,en;q=0.9"})
-        await context.set_user_agent(
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-            "AppleWebKit/537.36 (KHTML, like Gecko) "
-            "Chrome/124.0.0.0 Safari/537.36"
-        )
         
         # Try to accept cookies if they pop up
         try:
