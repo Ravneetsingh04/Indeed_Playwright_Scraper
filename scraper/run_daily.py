@@ -19,7 +19,20 @@ async def run():
         print(f"➡️ Visiting: {url}")
 
         await page.goto(url, wait_until="domcontentloaded")
-        await page.wait_for_selector("div.cardOutline.tapItem", timeout=10000)
+        # Handle potential cookie or consent popups
+        try:
+            await page.locator("button:has-text('Accept')").click(timeout=3000)
+            print("🍪 Accepted cookies popup")
+        except Exception:
+            pass
+
+        await page.wait_for_selector("div.cardOutline, div.job_seen_beacon", timeout=30000)
+        
+        html = await page.content()
+        if "cardOutline" not in html:
+            print("⚠️ cardOutline not found — page may have loaded differently or was blocked")
+
+
 
         # ✅ Updated Indeed selectors (2025)
         job_cards = await page.query_selector_all("div.cardOutline.tapItem")
