@@ -61,10 +61,10 @@ async def run():
         
                 print("🎉 Jobs scraped and saved successfully!")
         
-            finally:
-                await context.close()
-                await browser.close()
-                await playwright.stop()
+                finally:
+                    await context.close()
+                    await browser.close()
+                    await playwright.stop()
         
             print("✅ Scraping completed — check jobs.db for results.")
         
