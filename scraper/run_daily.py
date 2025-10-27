@@ -21,8 +21,8 @@ async def run():
 
         # Make Playwright appear like a real Chrome browser
         await context.add_init_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
-        await page.set_extra_http_headers({"Accept-Language": "en-US,en;q=0.9"})
-        await page.set_user_agent(
+        await context.set_extra_http_headers({"Accept-Language": "en-US,en;q=0.9"})
+        await context.set_user_agent(
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
             "AppleWebKit/537.36 (KHTML, like Gecko) "
             "Chrome/124.0.0.0 Safari/537.36"
