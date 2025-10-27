@@ -18,6 +18,9 @@ async def run():
         params = {"q": SEARCH_TERM, "l": LOCATION, "fromage": 1}
         url = BASE_URL + urlencode(params)
         print(f"➡️ Visiting: {url}")
+        # Build ScraperAPI URL
+        SCRAPER_API_KEY = os.getenv("SCRAPER_API_KEY")
+        scraper_url = f"http://api.scraperapi.com?api_key={SCRAPER_API_KEY}&url={url}"
 
         
         # Try to accept cookies if they pop up
