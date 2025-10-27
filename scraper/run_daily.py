@@ -19,7 +19,32 @@ async def run():
         url = BASE_URL + urlencode(params)
         print(f"➡️ Visiting: {url}")
 
+        # Make Playwright appear like a real Chrome browser
+        await context.add_init_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
+        await page.set_extra_http_headers({"Accept-Language": "en-US,en;q=0.9"})
+        await page.set_user_agent(
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+            "AppleWebKit/537.36 (KHTML, like Gecko) "
+            "Chrome/124.0.0.0 Safari/537.36"
+        )
+        
+        # Try to accept cookies if they pop up
+        try:
+            await page.locator("button:has-text('Accept')").click(timeout=3000)
+            print("🍪 Accepted cookies popup")
+        except Exception:
+            pass
+
+
         await page.goto(url, wait_until="domcontentloaded")
+        html = await page.content()
+        print("🔍 Page content length:", len(html))
+        
+        if "cardOutline" not in html:
+            print("⚠️ No job cards found — possible bot protection or cookie banner.")
+            snippet = html[:1000]
+            print("HTML snippet preview:\n", snippet)
+
         await page.wait_for_timeout(2000)  # small wait for rendering
 
         # ✅ Updated Indeed selectors (2025)
