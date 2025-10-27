@@ -21,7 +21,7 @@ async def run():
         print(f"➡️ Visiting: {url}")
         # Build ScraperAPI URL
         SCRAPER_API_KEY = os.getenv("SCRAPER_API_KEY")
-        scraper_url = f"http://api.scraperapi.com?api_key={SCRAPER_API_KEY}&url={url}"
+        scraper_url = f"http://api.scraperapi.com?api_key={SCRAPER_API_KEY}&url={url}&render=true"
 
         
         # Try to accept cookies if they pop up
@@ -32,9 +32,11 @@ async def run():
             pass
 
 
-        await page.goto(url, wait_until="domcontentloaded")
+        await page.goto(scraper_url, wait_until="domcontentloaded")
         html = await page.content()
         print("🔍 Page content length:", len(html))
+        print("First 500 chars:\n", html[:500])
+
         
         if "cardOutline" not in html:
             print("⚠️ No job cards found — possible bot protection or cookie banner.")
