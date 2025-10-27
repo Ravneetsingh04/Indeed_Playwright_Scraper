@@ -36,6 +36,7 @@ async def run():
         html = await page.content()
         print("🔍 Page content length:", len(html))
         print("First 500 chars:\n", html[:500])
+        print(scraper_url)
 
         
         if "cardOutline" not in html:
