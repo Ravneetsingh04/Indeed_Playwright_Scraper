@@ -59,14 +59,14 @@ async def run():
                 await upsert_job(job_data)
         
         
-                print("🎉 Jobs scraped and saved successfully!")
+            print("🎉 Jobs scraped and saved successfully!")
         
-                finally:
-                    await context.close()
-                    await browser.close()
-                    await playwright.stop()
+        finally:
+            await context.close()
+            await browser.close()
+            await playwright.stop()
         
-            print("✅ Scraping completed — check jobs.db for results.")
+        print("✅ Scraping completed — check jobs.db for results.")
         
-        if __name__ == "__main__":
-            asyncio.run(run())
+    if __name__ == "__main__":
+        asyncio.run(run())
