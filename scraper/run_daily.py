@@ -21,7 +21,7 @@ async def run():
         print(f"➡️ Visiting: {url}")
         # Build ScraperAPI URL
         SCRAPER_API_KEY = os.getenv("SCRAPER_API_KEY")
-        scraper_url = f"http://api.scraperapi.com?api_key={SCRAPER_API_KEY}&url={url}&render=true"
+        scraper_url = f"http://api.scraperapi.com?api_key={SCRAPER_API_KEY}&url={url}&render=true&premium=true"
 
         
         # Try to accept cookies if they pop up
