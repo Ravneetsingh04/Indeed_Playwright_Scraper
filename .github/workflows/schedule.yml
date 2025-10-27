@@ -22,7 +22,7 @@ jobs:
       - name: Run scraper
         env:
           PROXY_SERVER: ${{ secrets.PROXY_SERVER }}
-          SCRAPERAPI_KEY: ${{ secrets.SCRAPERAPI_KEY }}
+          SCRAPER_API_KEY: ${{ secrets.SCRAPER_API_KEY }}
         run: |
           python -m scraper.run_daily  # your script that runs crawler and writes jobs.db
       - name: Upload artifact (jobs.db)
