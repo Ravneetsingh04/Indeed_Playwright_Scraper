@@ -44,6 +44,8 @@ async def run():
             if job_url and job_url.startswith("/"):
                 job_url = urljoin("https://www.indeed.com", job_url)
 
+            print(f"Title: {title}, Company: {company}, URL: {job_url}") 
+
             if title and company and job_url:
                 job_data = {
                     "title": title.strip(),
