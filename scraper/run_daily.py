@@ -32,7 +32,7 @@ async def run():
             pass
 
 
-        await page.goto(scraper_url, wait_until="commit", timeout=90000
+        await page.goto(scraper_url, wait_until="commit", timeout=90000,
         await page.wait_for_timeout(3000)
 )
         html = await page.content()
