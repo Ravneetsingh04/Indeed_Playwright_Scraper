@@ -26,37 +26,41 @@ async def run():
         job_cards = await page.query_selector_all("div.job_seen_beacon, a.tapItem")
         print(f"✅ Found {len(job_cards)} job cards")
 
-        for card in job_cards:
-            title = await card.locator("h2.jobTitle span, h2 span, a[aria-label]").text_content().catch(lambda _: None)
-            company = await card.locator("span.companyName, span[data-testid='company-name']").text_content().catch(lambda _: None)
-            location_parts = await card.locator("div.companyLocation *, div[data-testid='text-location'] *").all_text_contents()
-            location = " ".join(p.strip() for p in location_parts if p.strip())
+        # ✅ Updated Indeed selectors (2025)
+job_cards = await page.query_selector_all("div.cardOutline.tapItem")
+print(f"✅ Found {len(job_cards)} job cards")
 
-            salary_parts = await card.locator(
-                "div[data-testid='salary-snippet-container'] span, "
-                "div[id='salaryInfoAndJobType'] span, "
-                "div[data-testid='attribute_snippet_text'], "
-                "span.css-1oc7tea"
-            ).all_text_contents()
-            salary = " ".join(p.strip() for p in salary_parts if p.strip()) or "Not disclosed"
+for card in job_cards:
+    # Extract job title
+    title_el = await card.query_selector("h2.jobTitle span[title]")
+    title = await title_el.text_content() if title_el else None
 
-            job_url = await card.locator("a").first.get_attribute("href")
-            if job_url and job_url.startswith("/"):
-                job_url = urljoin("https://www.indeed.com", job_url)
+    # Extract company name
+    company_el = await card.query_selector("span[data-testid='company-name']")
+    company = await company_el.text_content() if company_el else None
 
-            print(f"Title: {title}, Company: {company}, URL: {job_url}") 
+    # Extract location
+    location_el = await card.query_selector("div[data-testid='text-location']")
+    location = await location_el.text_content() if location_el else None
 
-            if title and company and job_url:
-                job_data = {
-                    "title": title.strip(),
-                    "company": company.strip(),
-                    "location": location.strip(),
-                    "salary": salary.strip(),
-                    "url": job_url,
-                    "description": "",
-                    "posted": datetime.now().strftime("%Y-%m-%d"),
-                }
-                await upsert_job(job_data)
+    # Extract job link
+    link_el = await card.query_selector("a.jcs-JobTitle")
+    job_url = await link_el.get_attribute("href") if link_el else None
+    if job_url and job_url.startswith("/"):
+        job_url = urljoin("https://www.indeed.com", job_url)
+
+    # Only insert valid jobs
+    if title and company and job_url:
+        job_data = {
+            "url": job_url,
+            "title": title.strip(),
+            "company": company.strip(),
+            "location": (location or "").strip(),
+            "description": "",
+        }
+        print("📝 Scraped job:", job_data["title"], "-", job_data["company"])
+        await upsert_job(job_data)
+
 
         print("🎉 Jobs scraped and saved successfully!")
 
