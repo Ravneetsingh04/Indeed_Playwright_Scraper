@@ -1,0 +1,36 @@
+name: weworkremotely-daily
+
+on:
+  schedule:
+    - cron: '0 2 * * *'  # runs daily at 02:00 UTC
+  workflow_dispatch: {}
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install --no-cache-dir -r requirements.txt
+          python -m playwright install --with-deps
+
+      - name: Run WWR daily scraper
+        env:
+          PROXY_SERVER: ${{ secrets.PROXY_SERVER }}
+          SCRAPER_API_KEY: ${{ secrets.SCRAPER_API_KEY }}
+        run: |
+          python -m scraper.weworkremotely_daily
+
+      - name: Upload artifact (jobs.db)
+        uses: actions/upload-artifact@v4
+        with:
+          name: weworkremotely-jobs-db
+          path: '**/jobs.db'
