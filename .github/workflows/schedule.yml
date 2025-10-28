@@ -24,7 +24,7 @@ jobs:
           PROXY_SERVER: ${{ secrets.PROXY_SERVER }}
           SCRAPER_API_KEY: ${{ secrets.SCRAPER_API_KEY }}
         run: |
-          python -m scraper.run_daily  # your script that runs crawler and writes jobs.db
+          python -m scraper.indeed_playwright  # your script that runs crawler and writes jobs.db
       - name: Upload artifact (jobs.db)
         uses: actions/upload-artifact@v4
         with:
