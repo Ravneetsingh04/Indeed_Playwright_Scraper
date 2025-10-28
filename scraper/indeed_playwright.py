@@ -98,30 +98,41 @@ class IndeedPlaywright:
     # -------------------- Browser Setup -------------------- #
     def start_browser(self):
         self._p = sync_playwright().start()
-        self._browser = self._p.chromium.launch(headless=self.headless)
-        self._context = self._browser.new_context(user_agent=USER_AGENT)
-        self._context.add_init_script("""
-Object.defineProperty(navigator, 'webdriver', {get: () => undefined});
-window.navigator.chrome = {runtime: {}};
-Object.defineProperty(navigator, 'languages', {get: () => ['en-US','en']});
-Object.defineProperty(navigator, 'plugins', {get: () => [1, 2, 3, 4, 5]});
-""")
-        self._browser = self._p.chromium.launch(
-    headless=self.headless,
-    args=[
-        "--disable-blink-features=AutomationControlled",
-        "--disable-dev-shm-usage",
-        "--no-sandbox",
-        "--disable-infobars",
-        "--window-size=1920,1080"
-    ],
-)
 
+        # Launch Chromium with stealthy args
+        self._browser = self._p.chromium.launch(
+            headless=self.headless,
+            args=[
+                "--disable-blink-features=AutomationControlled",
+                "--no-sandbox",
+                "--disable-dev-shm-usage",
+                "--disable-infobars",
+                "--window-size=1920,1080",
+                "--start-maximized",
+                "--disable-features=IsolateOrigins,site-per-process",
+            ],
+        )
+
+        # Create context with realistic user agent and viewport
+        self._context = self._browser.new_context(
+            user_agent=USER_AGENT,
+            viewport={"width": 1920, "height": 1080},
+        )
+
+        # Inject stealth JavaScript *before any page runs*
+        self._context.add_init_script("""
+        Object.defineProperty(navigator, 'webdriver', {get: () => undefined});
+        window.navigator.chrome = {runtime: {}};
+        Object.defineProperty(navigator, 'languages', {get: () => ['en-US','en']});
+        Object.defineProperty(navigator, 'plugins', {get: () => [1, 2, 3, 4, 5]});
+        Object.defineProperty(Notification, 'permission', {get: () => 'default'});
+        """)
 
         self._page = self._context.new_page()
         self._page.set_default_timeout(DEFAULT_TIMEOUT)
         logging.info("Browser started (headless=%s)", self.headless)
         return self._page
+
 
     def close_browser(self):
         try:
