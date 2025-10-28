@@ -100,6 +100,24 @@ class IndeedPlaywright:
         self._p = sync_playwright().start()
         self._browser = self._p.chromium.launch(headless=self.headless)
         self._context = self._browser.new_context(user_agent=USER_AGENT)
+        self._context.add_init_script("""
+Object.defineProperty(navigator, 'webdriver', {get: () => undefined});
+window.navigator.chrome = {runtime: {}};
+Object.defineProperty(navigator, 'languages', {get: () => ['en-US','en']});
+Object.defineProperty(navigator, 'plugins', {get: () => [1, 2, 3, 4, 5]});
+""")
+        self._browser = self._p.chromium.launch(
+    headless=self.headless,
+    args=[
+        "--disable-blink-features=AutomationControlled",
+        "--disable-dev-shm-usage",
+        "--no-sandbox",
+        "--disable-infobars",
+        "--window-size=1920,1080"
+    ],
+)
+
+
         self._page = self._context.new_page()
         self._page.set_default_timeout(DEFAULT_TIMEOUT)
         logging.info("Browser started (headless=%s)", self.headless)
