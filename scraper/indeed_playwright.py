@@ -125,11 +125,17 @@ class IndeedPlaywright:
 
         logging.info("Visiting page #%d: %s", self.page_count + 1, url)
         try:
-            self._page.goto(url, wait_until="domcontentloaded", timeout=45000)
-            self._page.mouse.move(300, 250)
-            self._page.evaluate("window.scrollBy(0, 1000)")
+            self._page.goto(url, wait_until="domcontentloaded", timeout=30000)
+            self._page.mouse.move(400, 300)
+            self._page.evaluate("window.scrollBy(0, 1500)")
             time.sleep(2)
-            self._page.wait_for_selector("div.job_seen_beacon, a.tapItem", timeout=10000)
+            try:
+                self._page.wait_for_selector("div.job_seen_beacon, a.tapItem", timeout=10000)
+            except PlaywrightTimeout:
+                logging.warning("First wait timed out — retrying after more scroll.")
+                self._page.evaluate("window.scrollBy(0, 2000)")
+                time.sleep(3)
+                self._page.wait_for_selector("div.job_seen_beacon, a.tapItem", timeout=8000)
             self.page_count += 1
             self.visited_pages.add(url)
             return True
