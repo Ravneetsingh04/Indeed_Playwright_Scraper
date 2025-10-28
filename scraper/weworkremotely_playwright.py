@@ -26,8 +26,9 @@ import os
 
 # --- Config (customize if needed) ---
 BASE = "https://weworkremotely.com"
-SEARCH_QUERY = "rails developer"
-LISTING_PATH = f"/remote-jobs/search?term={SEARCH_QUERY.replace(' ', '+')}&sort=Past+24+Hours"
+SEARCH_QUERY = "python developer"
+LISTING_PATH = f"/remote-jobs/search?term={SEARCH_QUERY.replace(' ', '+')}"
+# &sort=Past+24+Hours
 OUTPUT_CSV = "weworkremotely_playwright_jobs.csv"
 USER_AGENT = os.getenv(
     "WWR_USER_AGENT",
