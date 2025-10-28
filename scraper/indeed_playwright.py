@@ -120,54 +120,54 @@ class IndeedPlaywright:
     # -------------------- Navigation -------------------- #
     def make_request(self, url):
         if self.page_count >= MAX_PAGES:
-        logging.info("Max pages reached (%d). Stopping.", MAX_PAGES)
-        return False
-
-    logging.info("Visiting page #%d: %s", self.page_count + 1, url)
-    try:
-        self._page.goto(url, wait_until="domcontentloaded", timeout=45000)
-
-        # Simulate real interaction
-        self._page.mouse.move(300, 300)
-        self._page.keyboard.press("PageDown")
-        self._page.evaluate("window.scrollBy(0, document.body.scrollHeight/2)")
-        time.sleep(3)
-        self._page.keyboard.press("ArrowDown")
-        time.sleep(2)
-        self._page.keyboard.press("ArrowDown")
-
-        # Broaden our selector to anything that looks like a job card
-        possible_selectors = [
-            "div.job_seen_beacon",
-            "a.tapItem",
-            "div.slider_container",
-            "div.jobsearch-SerpJobCard",
-        ]
-        found = False
-        for sel in possible_selectors:
-            try:
-                self._page.wait_for_selector(sel, timeout=8000)
-                found = True
-                break
-            except PlaywrightTimeout:
-                continue
-
-        if not found:
-            logging.warning("⚠️ Still no job cards visible after full scroll.")
-            snapshot = self._page.content()
-            logging.debug("Page snapshot:\n%s", snapshot[:1000])
+            logging.info("Max pages reached (%d). Stopping.", MAX_PAGES)
             return False
 
-        self.page_count += 1
-        self.visited_pages.add(url)
-        return True
-
-    except PlaywrightTimeout:
-        logging.warning("Timeout visiting %s", url)
-        return False
-    except Exception as e:
-        logging.warning("Error visiting %s: %s", url, e)
-        return False
+        logging.info("Visiting page #%d: %s", self.page_count + 1, url)
+        try:
+            self._page.goto(url, wait_until="domcontentloaded", timeout=45000)
+    
+            # Simulate real interaction
+            self._page.mouse.move(300, 300)
+            self._page.keyboard.press("PageDown")
+            self._page.evaluate("window.scrollBy(0, document.body.scrollHeight/2)")
+            time.sleep(3)
+            self._page.keyboard.press("ArrowDown")
+            time.sleep(2)
+            self._page.keyboard.press("ArrowDown")
+    
+            # Broaden our selector to anything that looks like a job card
+            possible_selectors = [
+                "div.job_seen_beacon",
+                "a.tapItem",
+                "div.slider_container",
+                "div.jobsearch-SerpJobCard",
+            ]
+            found = False
+            for sel in possible_selectors:
+                try:
+                    self._page.wait_for_selector(sel, timeout=8000)
+                    found = True
+                    break
+                except PlaywrightTimeout:
+                    continue
+    
+            if not found:
+                logging.warning("⚠️ Still no job cards visible after full scroll.")
+                snapshot = self._page.content()
+                logging.debug("Page snapshot:\n%s", snapshot[:1000])
+                return False
+    
+            self.page_count += 1
+            self.visited_pages.add(url)
+            return True
+    
+        except PlaywrightTimeout:
+            logging.warning("Timeout visiting %s", url)
+            return False
+        except Exception as e:
+            logging.warning("Error visiting %s: %s", url, e)
+            return False
 
     # -------------------- Extract and Parse -------------------- #
     def extract_job_cards(self):
