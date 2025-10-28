@@ -22,7 +22,7 @@ async def run():
 
         # --- Visit Indeed directly (no ScraperAPI) ---
         await page.goto(url, wait_until="domcontentloaded", timeout=60000)
-        except Exception as e:
+    except Exception as e:
             print(f"⚠️ Page load error: {e}")
             return
 
