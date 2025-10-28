@@ -32,19 +32,19 @@ async def run():
             print(f"⚠️ Page load error: {e}")
             return
 
-        html = await page.content()
-        print("🔍 Page content length:", len(html))
-        print("First 500 chars:\n", html[:500])
+    html = await page.content()
+    print("🔍 Page content length:", len(html))
+    print("First 500 chars:\n", html[:500])
 
-        # --- Extract Job Cards ---
-        job_cards = await page.query_selector_all(
-            "div.job_seen_beacon, a.tapItem, div.cardOutline.tapItem"
-        )
-        if not job_cards:
-            print("⚠️ No job cards found — check HTML structure or potential bot detection.")
-            snippet = html[:1000]
-            print("HTML snippet preview:\n", snippet)
-            return
+    # --- Extract Job Cards ---
+    job_cards = await page.query_selector_all(
+        "div.job_seen_beacon, a.tapItem, div.cardOutline.tapItem"
+    )
+    if not job_cards:
+        print("⚠️ No job cards found — check HTML structure or potential bot detection.")
+        snippet = html[:1000]
+        print("HTML snippet preview:\n", snippet)
+        return
 
         print(f"✅ Found {len(job_cards)} job cards")
         seen_urls = set()
