@@ -1,4 +1,4 @@
-# scraper/run_daily.py
+# scraper/indeed_playwright.py
 import asyncio
 from datetime import datetime
 from urllib.parse import urlencode, urljoin
@@ -7,7 +7,6 @@ from scraper.storage import init_db, upsert_job
 import os
 
 BASE_URL = "https://www.indeed.com/jobs?"
-
 SEARCH_TERM = "Python Developer"
 LOCATION = "New York, NY"
 
@@ -16,65 +15,71 @@ async def run():
     playwright, browser, context, page = await create_stealth_context(headless=True)
 
     try:
+        # --- Build direct Indeed URL ---
         params = {"q": SEARCH_TERM, "l": LOCATION, "fromage": 1}
         url = BASE_URL + urlencode(params)
         print(f"➡️ Visiting: {url}")
-        # Build ScraperAPI URL
-        SCRAPER_API_KEY = os.getenv("SCRAPER_API_KEY")
-        scraper_url = f"http://api.scraperapi.com?api_key={SCRAPER_API_KEY}&url={url}&render=true&premium=true"
-        print(f"➡️ Visiting via ScraperAPI: {url}")
 
-        await page.goto(scraper_url, wait_until="commit", timeout=90000)
+        # --- Visit Indeed directly (no ScraperAPI) ---
+        await page.goto(url, wait_until="networkidle", timeout=90000)
         await page.wait_for_timeout(3000)
 
         html = await page.content()
         print("🔍 Page content length:", len(html))
         print("First 500 chars:\n", html[:500])
-        print(scraper_url)
 
-        
         # --- Extract Job Cards ---
-        job_cards = await page.query_selector_all("div.job_seen_beacon, a.tapItem, div.cardOutline.tapItem")
+        job_cards = await page.query_selector_all(
+            "div.job_seen_beacon, a.tapItem, div.cardOutline.tapItem"
+        )
         if not job_cards:
-            print("⚠️ No job cards found — check HTML structure or bot protection.")
+            print("⚠️ No job cards found — check HTML structure or potential bot detection.")
             snippet = html[:1000]
             print("HTML snippet preview:\n", snippet)
             return
 
         print(f"✅ Found {len(job_cards)} job cards")
-
         seen_urls = set()
 
-        for card in job_cards[:10]:  # Limit to first 10 for sanity
-            # --- Title Extraction ---
-            title = (
-                await card.locator("h2.jobTitle span").text_content().catch(lambda _: None)
-                or await card.locator("h2 span").text_content().catch(lambda _: None)
-                or await card.locator("a[aria-label]").get_attribute("aria-label").catch(lambda _: None)
-            )
+        for card in job_cards[:10]:  # limit to first 10 for sanity
+            # --- Title ---
+            try:
+                title = (
+                    await card.locator("h2.jobTitle span").text_content().catch(lambda _: None)
+                    or await card.locator("h2 span").text_content().catch(lambda _: None)
+                    or await card.locator("a[aria-label]").get_attribute("aria-label").catch(lambda _: None)
+                )
+            except Exception:
+                title = None
 
-            # --- Company Extraction ---
+            # --- Company ---
             company_el = await card.query_selector("span.companyName, span[data-testid='company-name']")
             company = await company_el.text_content() if company_el else None
 
-            # --- Location Extraction ---
-            location_parts = await card.locator(
-                "div.companyLocation *, div[data-testid='text-location'] *"
-            ).all_text_contents()
-            location = " ".join(p.strip() for p in location_parts if p.strip())
+            # --- Location ---
+            try:
+                location_parts = await card.locator(
+                    "div.companyLocation *, div[data-testid='text-location'] *"
+                ).all_text_contents()
+                location = " ".join(p.strip() for p in location_parts if p.strip())
+            except Exception:
+                location = ""
 
-            # --- Salary Extraction ---
-            salary_parts = await card.locator(
-                "div[id='salaryInfoAndJobType'] span, "
-                "div[data-testid='attribute_snippet_text'], "
-                "div[data-testid='jobsearch-OtherJobDetailsContainer'] span, "
-                "div[data-testid='salary-snippet-container'] span, "
-                "span.css-1oc7tea, "
-                "span[data-testid='attribute_snippet_text']"
-            ).all_text_contents()
-            salary = " ".join(p.strip() for p in salary_parts if p.strip()) or "Not disclosed"
+            # --- Salary ---
+            try:
+                salary_parts = await card.locator(
+                    "div[id='salaryInfoAndJobType'] span, "
+                    "div[data-testid='attribute_snippet_text'], "
+                    "div[data-testid='jobsearch-OtherJobDetailsContainer'] span, "
+                    "div[data-testid='salary-snippet-container'] span, "
+                    "span.css-1oc7tea, "
+                    "span[data-testid='attribute_snippet_text']"
+                ).all_text_contents()
+                salary = " ".join(p.strip() for p in salary_parts if p.strip()) or "Not disclosed"
+            except Exception:
+                salary = "Not disclosed"
 
-            # --- Job URL Extraction ---
+            # --- Job URL ---
             link_el = await card.query_selector("a")
             job_url = await link_el.get_attribute("href") if link_el else None
 
