@@ -15,10 +15,10 @@ async def run():
     playwright, browser, context, page = await create_stealth_context(headless=True)
 
     
-        # --- Build direct Indeed URL ---
-        params = {"q": SEARCH_TERM, "l": LOCATION, "fromage": 1}
-        url = BASE_URL + urlencode(params)
-        print(f"➡️ Visiting: {url}")
+    # --- Build direct Indeed URL ---
+    params = {"q": SEARCH_TERM, "l": LOCATION, "fromage": 1}
+    url = BASE_URL + urlencode(params)
+    print(f"➡️ Visiting: {url}")
     try:
         # --- Visit Indeed directly (no ScraperAPI) ---
         await page.goto(url, wait_until="domcontentloaded", timeout=60000)
