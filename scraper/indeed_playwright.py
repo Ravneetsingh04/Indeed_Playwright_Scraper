@@ -21,8 +21,16 @@ async def run():
         print(f"➡️ Visiting: {url}")
 
         # --- Visit Indeed directly (no ScraperAPI) ---
-        await page.goto(url, wait_until="networkidle", timeout=90000)
-        await page.wait_for_timeout(3000)
+        await page.goto(url, wait_until="domcontentloaded", timeout=60000)
+        except Exception as e:
+            print(f"⚠️ Page load error: {e}")
+            return
+
+        await page.mouse.move(200, 300)
+        await page.evaluate("window.scrollBy(0, 800)")
+        await page.wait_for_timeout(2000)
+        # Explicitly wait for job cards
+        await page.wait_for_selector("div.job_seen_beacon, a.tapItem", timeout=15000)
 
         html = await page.content()
         print("🔍 Page content length:", len(html))
