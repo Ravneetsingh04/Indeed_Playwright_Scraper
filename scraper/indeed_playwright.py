@@ -18,7 +18,7 @@ import sqlite3
 
 # --- Config ---
 BASE = "https://www.indeed.com"
-SEARCH_QUERY = "Python Developer"
+SEARCH_QUERY ="Java Remote"
 LOCATION = "New York, NY"
 LISTING_PATH = f"/jobs?{urlencode({'q': SEARCH_QUERY, 'l': LOCATION, 'fromage': 1})}"
 USER_AGENT = os.getenv(
@@ -100,8 +100,12 @@ class IndeedPlaywright:
         self._p = sync_playwright().start()
 
         # Launch Chromium with stealthy args
+        proxy_server = os.getenv("PROXY_SERVER")
+        proxy = {"server": proxy_server} if proxy_server else None
+
         self._browser = self._p.chromium.launch(
             headless=self.headless,
+            proxy=proxy,
             args=[
                 "--disable-blink-features=AutomationControlled",
                 "--no-sandbox",
@@ -112,6 +116,7 @@ class IndeedPlaywright:
                 "--disable-features=IsolateOrigins,site-per-process",
             ],
         )
+
 
         # Create context with realistic user agent and viewport
         self._context = self._browser.new_context(
