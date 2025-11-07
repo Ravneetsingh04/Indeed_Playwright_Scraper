@@ -333,7 +333,7 @@ class IndeedPlaywright:
                 self.parse_listing_page()
 
                 if self.page_count >= MAX_PAGES:
-                    logging.info("Reached MAX_PAGES (%d). Stopping pagination.", MAX_PAGES)
+                    logging.info("Reached MAX_PAGES (%d). Stopping pagination.", MAX_PAGES) 
                     break
 
                 next_url = self.find_next_page()
