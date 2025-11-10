@@ -14,13 +14,15 @@ import random
 import logging
 from datetime import datetime
 import os
+import csv
 import sqlite3
 
 # --- Config ---
 BASE = "https://www.indeed.com"
-SEARCH_QUERY ="Java Remote"
+SEARCH_QUERY ="C++ Remote"
 LOCATION = "New York, NY"
 LISTING_PATH = f"/jobs?{urlencode({'q': SEARCH_QUERY, 'l': LOCATION, 'fromage': 1})}"
+OUTPUT_CSV = "indeed_playwright_jobs.csv"
 USER_AGENT = os.getenv(
     "INDEED_USER_AGENT",
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
@@ -45,6 +47,7 @@ class IndeedPlaywright:
         self.page_count = 0
         self.visited_pages = set()
         self.seen_urls = set()
+        self.results = []  # ✅ store parsed jobs for CSV
         self.conn = self.ensure_db()
 
     # -------------------- Database Setup -------------------- #
@@ -150,6 +153,15 @@ class IndeedPlaywright:
             pass
         self.conn.close()
         logging.info("Browser closed and DB connection closed")
+
+    def clean_url(self, url):
+        """Remove tracking query params for consistent deduping."""
+        if not url:
+            return url
+        if "?" in url:
+            url = url.split("?")[0]
+        return url.strip().rstrip("/")
+
 
     # -------------------- Navigation -------------------- #
     def make_request(self, url):
@@ -283,6 +295,7 @@ class IndeedPlaywright:
             }
 
             self.upsert_job(job)
+            self.results.append(job)  # ✅ collect job for CSV export
             logging.info("📝 Saved: %s - %s", job["title"], job["company"])
             return job
         except Exception as e:
@@ -316,6 +329,61 @@ class IndeedPlaywright:
             return next_url
         except Exception:
             return None
+        
+    def normalize_url(self, url: str) -> str:
+        """Return a normalized Indeed job URL stripped of tracking params."""
+        if not url:
+            return ""
+        # Keep only the job ID (jk= or vjk=)
+        if "jk=" in url:
+            job_id = url.split("jk=")[-1].split("&")[0]
+        elif "vjk=" in url:
+            job_id = url.split("vjk=")[-1].split("&")[0]
+        else:
+            job_id = url.split("?")[0].rstrip("/").split("/")[-1]
+        return f"{BASE}/viewjob?jk={job_id}"
+
+            
+    def save_to_csv(self, filename=OUTPUT_CSV):
+        keys = ["title", "company", "location", "posted", "salary", "url", "fetched_at"]
+
+        # --- Step 1: Load existing jobs (if file exists) ---
+        existing_jobs = []
+        if os.path.exists(filename):
+            with open(filename, "r", encoding="utf-8") as f:
+                reader = csv.DictReader(f)
+                existing_jobs = list(reader)
+
+        # --- Step 2: Build a set of existing URLs to prevent duplicates ---
+        existing_urls = {self.normalize_url(job["url"]) for job in existing_jobs if job.get("url")}
+
+        # --- Step 3: Filter new jobs (skip ones already in file) ---
+        new_jobs = []
+        for job in self.results:
+            norm_url = self.normalize_url(job["url"])
+            if norm_url not in existing_urls:
+                job["url"] = norm_url
+                job["fetched_at"] = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
+                new_jobs.append(job)
+                existing_urls.add(norm_url)
+
+        if not new_jobs:
+            logging.info("No new jobs found. CSV unchanged.")
+            return
+
+        logging.info("🆕 %d new jobs found.", len(new_jobs))
+
+        # --- Step 4: Add new jobs at the TOP ---
+        combined_jobs = new_jobs + existing_jobs
+
+        # --- Step 5: Write combined list back to file ---
+        with open(filename, "w", newline="", encoding="utf-8") as f:
+            writer = csv.DictWriter(f, fieldnames=keys)
+            writer.writeheader()
+            writer.writerows(combined_jobs)
+
+        logging.info("✅ CSV updated — %d total jobs, %d newly added.", len(combined_jobs), len(new_jobs))
+
 
     # -------------------- Main runner -------------------- #
     def run(self, headless=True, start_path=LISTING_PATH):
@@ -333,7 +401,7 @@ class IndeedPlaywright:
                 self.parse_listing_page()
 
                 if self.page_count >= MAX_PAGES:
-                    logging.info("Reached MAX_PAGES (%d). Stopping pagination.", MAX_PAGES) 
+                    logging.info("Reached MAX_PAGES (%d). Stopping pagination.", MAX_PAGES)
                     break
 
                 next_url = self.find_next_page()
@@ -350,7 +418,11 @@ class IndeedPlaywright:
             logging.info("✅ Crawl finished: pages=%d, jobs=%d", self.page_count, len(self.seen_urls))
         finally:
             self.close_browser()
-        return []
+        # ✅ Save results to CSV
+        if self.results:
+            self.save_to_csv()
+        else:
+            logging.warning("⚠️ No results to save — CSV not updated.")
 
 
 # Run directly
