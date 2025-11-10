@@ -26,7 +26,7 @@ import os
 
 # --- Config (customize if needed) ---
 BASE = "https://weworkremotely.com"
-SEARCH_QUERY = "python developer"
+SEARCH_QUERY = "Java Developer"
 LISTING_PATH = f"/remote-jobs/search?term={SEARCH_QUERY.replace(' ', '+')}"
 # &sort=Past+24+Hours
 OUTPUT_CSV = "weworkremotely_playwright_jobs.csv"
@@ -55,13 +55,50 @@ class WeWorkRemotelyPlaywright:
         self.visited_pages = set()
         self.results = []
 
+    # def start_browser(self):
+    #     self._p = sync_playwright().start()
+    #     # use chromium by default (you can change to firefox if desired)
+    #     self._browser = self._p.chromium.launch(headless=self.headless)
+    #     self._context = self._browser.new_context(
+    #         user_agent=USER_AGENT,
+    #         viewport={"width": 1280, "height": 800},
+    #         locale="en-US",
+    #         java_script_enabled=True,
+    #     )
+    #     self._context.add_init_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
+    #     self._page = self._context.new_page()
+    #     # small default timeout
+    #     self._page.set_default_timeout(DEFAULT_TIMEOUT)
+    #     logging.info("Browser started (headless=%s)", self.headless)
+    #     return self._page
+
     def start_browser(self):
         self._p = sync_playwright().start()
-        # use chromium by default (you can change to firefox if desired)
-        self._browser = self._p.chromium.launch(headless=self.headless)
-        self._context = self._browser.new_context(user_agent=USER_AGENT)
+        # Launch with stealth-like settings
+        self._browser = self._p.chromium.launch(
+            headless=self.headless,
+            args=[
+                "--disable-blink-features=AutomationControlled",
+                "--no-sandbox",
+                "--disable-dev-shm-usage",
+                "--disable-infobars",
+                "--disable-gpu",
+                "--window-size=1280,800"
+            ]
+        )
+
+        self._context = self._browser.new_context(
+            user_agent=USER_AGENT,
+            viewport={"width": 1280, "height": 800},
+            locale="en-US",
+            java_script_enabled=True,
+        )
+        # Remove webdriver flag to avoid detection
+        self._context.add_init_script(
+            "Object.defineProperty(navigator, 'webdriver', {get: () => undefined});"
+        )
+
         self._page = self._context.new_page()
-        # small default timeout
         self._page.set_default_timeout(DEFAULT_TIMEOUT)
         logging.info("Browser started (headless=%s)", self.headless)
         return self._page
@@ -77,28 +114,62 @@ class WeWorkRemotelyPlaywright:
             pass
         logging.info("Browser closed")
 
+    # def make_request(self, url):
+    #     """
+    #     Visit a page with Playwright. Equivalent of Scrapy request wrapped with internal counters.
+    #     """
+    #     if self.page_count >= MAX_PAGES:
+    #         logging.info("Max pages reached (%d). Not requesting: %s", MAX_PAGES, url)
+    #         return False
+
+    #     logging.info("Visiting listing page #%d: %s", self.page_count + 1, url)
+    #     try:
+    #         for attempt in range(3):
+    #             try:
+    #                 self._page.goto(url, timeout=60000, wait_until="domcontentloaded")
+    #                 self._page.wait_for_load_state("networkidle", timeout=30000)
+    #                 break
+    #             except PlaywrightTimeout:
+    #                 logging.warning("Timeout while visiting %s", url)
+    #                 if attempt == 2:
+    #                     raise
+    #                 time.sleep(3)
+    #     except Exception as e:
+    #         logging.warning("Error visiting %s : %s", url, e)
+    #         return False
+
     def make_request(self, url):
         """
-        Visit a page with Playwright. Equivalent of Scrapy request wrapped with internal counters.
+        Visit a page with retry and longer timeout (robust against slow WWR loads).
         """
         if self.page_count >= MAX_PAGES:
             logging.info("Max pages reached (%d). Not requesting: %s", MAX_PAGES, url)
             return False
 
         logging.info("Visiting listing page #%d: %s", self.page_count + 1, url)
-        try:
-            self._page.goto(url, timeout=30000)
-            self._page.wait_for_load_state("networkidle", timeout=15000)
-            random_sleep(0.2, 0.6)
-            self.page_count += 1
-            self.visited_pages.add(url)
-            return True
-        except PlaywrightTimeout:
-            logging.warning("Timeout while visiting %s", url)
-            return False
-        except Exception as e:
-            logging.warning("Error visiting %s : %s", url, e)
-            return False
+
+        for attempt in range(3):  # up to 3 retries
+            try:
+                self._page.goto(url, timeout=90000, wait_until="domcontentloaded")
+                self._page.wait_for_load_state("networkidle", timeout=45000)
+
+                # ensure jobs are present before proceeding
+                self._page.wait_for_selector("li.new-listing-container", timeout=20000)
+                random_sleep(0.4, 1.0)
+                self.page_count += 1
+                self.visited_pages.add(url)
+                logging.info("Successfully loaded page #%d", self.page_count)
+                return True
+
+            except PlaywrightTimeout:
+                logging.warning(f"Timeout on attempt {attempt+1} for {url}")
+                time.sleep(3)
+            except Exception as e:
+                logging.warning(f"Error visiting {url} (attempt {attempt+1}): {e}")
+                time.sleep(2)
+
+        logging.error("Failed to fetch page after 3 attempts: %s", url)
+        return False
 
     def extract_job_cards(self):
         """
@@ -204,14 +275,50 @@ class WeWorkRemotelyPlaywright:
         except Exception:
             return None
 
+    # def save_to_csv(self, filename=OUTPUT_CSV):
+    #     keys = ["title", "company", "location", "posted", "salary", "url"]
+    #     with open(filename, "w", newline="", encoding="utf-8") as f:
+    #         writer = csv.DictWriter(f, fieldnames=keys)
+    #         writer.writeheader()
+    #         for r in self.results:
+    #             writer.writerow(r)
+    #     logging.info("Saved %d records to %s", len(self.results), filename)
+
     def save_to_csv(self, filename=OUTPUT_CSV):
         keys = ["title", "company", "location", "posted", "salary", "url"]
+
+        # --- Step 1: Load existing jobs (if CSV exists)
+        existing_jobs = []
+        if os.path.exists(filename):
+            with open(filename, "r", encoding="utf-8") as f:
+                reader = csv.DictReader(f)
+                for row in reader:
+                    existing_jobs.append(row)
+
+        # --- Step 2: Avoid duplicates (compare by 'url')
+        existing_urls = {job["url"] for job in existing_jobs}
+        new_unique_jobs = [job for job in self.results if job["url"] not in existing_urls]
+
+        if not new_unique_jobs:
+            logging.info("No new unique jobs found — CSV not updated.")
+            return
+
+        # --- Step 3: Combine new + old (new on top)
+        combined_jobs = new_unique_jobs + existing_jobs
+
+        # --- Step 4: Write back all jobs
         with open(filename, "w", newline="", encoding="utf-8") as f:
             writer = csv.DictWriter(f, fieldnames=keys)
             writer.writeheader()
-            for r in self.results:
-                writer.writerow(r)
-        logging.info("Saved %d records to %s", len(self.results), filename)
+            writer.writerows(combined_jobs)
+
+        logging.info(
+            "Saved %d new jobs (total %d records now) to %s",
+            len(new_unique_jobs),
+            len(combined_jobs),
+            filename,
+        )
+
 
     def run(self, headless=True, start_path=LISTING_PATH):
         self.start_browser()
